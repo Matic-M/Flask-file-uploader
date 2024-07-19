@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!--<link rel="stylesheet" href="/static/style.css">-->
+    <title>Client Page</title>
+</head>
+
+<body>
+
+
+    <!--loginform-->
+    <form id="loginForm">
+        <label>Username:</label>
+        <input type="text" id="username" name="username" required>
+        <br>
+        <label>Password:</label>
+        <input type="password" id="password" name="password" required>
+        <br>
+        <button type="button" onclick="login()">Login</button>
+    </form>
+
+
+
+    <script>
+
+        // jwt token init
+        let token = "";
+
+        // get token
+        function getToken() {
+            return token;
+        }
+
+        // set token
+        function setToken(bearerToken) {
+            token = bearerToken;
+        }
+
+        // login function called on login submit
+        function login() {
+            var xhrpostlogin = new XMLHttpRequest();
+            var username = document.getElementById("username").value;
+            var password = document.getElementById("password").value;
+
+
+            xhrpostlogin.open('POST', 'http://164.8.67.106:5000/login');
+            xhrpostlogin.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+
+
+
+            xhrpostlogin.onreadystatechange = function () {
+                if (xhrpostlogin.readyState == 4) {
+                    if (xhrpostlogin.status == 200) {
+                        var jsonResponse = JSON.parse(xhrpostlogin.responseText);
+
+                        var a = JSON.stringify(jsonResponse);
+
+                        alert(JSON.parse(a).access_token);
+                        setToken(JSON.parse(a).access_token);
+
+                        // choice between upload and show images
+                        return document.getElementById("loginForm").innerHTML = "<div id='choice'><button type='button' onclick='uploadContainer()'>UPLOAD</button><br><button type='button' onclick='show()'>SHOW</button></div>";                                                                           
+                    }
+                    else {
+                        alert("Login failed !");
+                    }
+
+                }
+            };
+
+            // sends credentials to a server
+            xhrpostlogin.send(JSON.stringify({ "username": username, "password": password }));
+
+        }
+
+        // opens upload container to choose image
+        function uploadContainer() {
+
+            document.getElementById('choice').innerHTML = "<form id='uploadForm'> <input type='file' id='file'><br><button type='button' onClick='upload()'>Upload!</button></form>";
+
+        }
+
+        // uploads image to a server with token authentication
+        function upload() {
+
+            var xhrpostupload = new XMLHttpRequest();
+            var selectedFile = document.getElementById('file').files[0];
+            //var time = new Date().getTime().toString();
+
+            var formData = new FormData();
+            formData.append("datoteka", selectedFile);
+
+            xhrpostupload.open("POST", 'http://164.8.67.106:5000/fileUpload');
+            xhrpostupload.setRequestHeader('Authorization', 'Bearer ' + getToken());
+
+            xhrpostupload.onreadystatechange = function () {
+                if (xhrpostupload.readyState == 4) {
+                    if (xhrpostupload.status == 200) {
+                        alert("File uploaded");
+                    } else {
+                        alert(xhrpostupload.status);
+                    }
+                }
+            }
+            xhrpostupload.send(formData);
+
+            return document.getElementById("loginForm").innerHTML = "<div id='choice'><button id='upload' onclick='uploadContainer()'>UPLOAD</button><br><button id='show' onclick='show()'>SHOW</button></div>";
+
+        }
+
+ 
+        // shows images on a server with a token authentication
+        function show() {
+                var xhrget = new XMLHttpRequest();
+
+                xhrget.open('GET', 'http://164.8.67.106:5000/showFile');
+                xhrget.setRequestHeader('Authorization', 'Bearer ' + getToken());
+
+                xhrget.onreadystatechange = function () {
+                    if (xhrget.readyState == 4) {
+                        if (xhrget.status == 200) {
+                            try {
+                                var files = JSON.parse(xhrget.responseText);
+                                console.log(files);
+
+                                if (Array.isArray(files)) {
+                                    var html = "<ul>";
+
+                                    files.forEach(file => {
+                                        var base64String = atob(file.pathR); // decodes base64 format
+                                        var imageUrl = 'data:image/*;base64,' + base64String; // image url 
+                                        html += `<li><img src="${imageUrl}" alt="${file.filename}"></li>`;
+                                    });
+
+                                    html += "</ul>"
+                                    document.getElementById("loginForm").innerHTML = html;
+                                } else {
+                                    console.error("Invalid JSON response format");
+                                }
+                            } catch (e) {
+                                console.error("Error parsing JSON: " + e.message);
+                            }
+                        } else {
+                            console.error("Request failed with status: " + xhrget.status);
+                        }
+                    }
+                }
+
+                xhrget.send();
+            }
+
+    </script>
+</body>
+</html>
