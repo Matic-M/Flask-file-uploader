@@ -18,6 +18,8 @@ source venv/bin/activate
 git clone https://github.com/Matic-M/Flask-file-uploader
 ````
 
+* inside folder make another folder called DATA and change path in api_server.py!!!
+
 * install requirements
 ```bash
 pip install -r requirements.txt
